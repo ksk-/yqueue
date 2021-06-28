@@ -31,6 +31,22 @@ The multiple queues processor.
 
         cmake --build . --target install
 
-### run unit tests (you shoud enable tests with option "-DTESTS_ENABLE=ON" in configuration step)
+### run unit tests
+
+NOTE: you shoud enable tests with option "-DTESTS_ENABLE=ON" in configuration step
 
         cmake --build . --target test
+
+## how to use
+
+the library is header-only but you have to link the Boost.Fiber library and the thread library of the system with your app
+
+### example for CMake projets
+
+        find_package(Threads)
+        find_package(Boost REQUIRED COMPONENTS fiber)
+
+        find_package(yqueue 0.0.2 REQUIRED)
+
+        add_executable(your-app main.cpp)
+        target_link_libraries(your-app PRIVATE yqueue)
