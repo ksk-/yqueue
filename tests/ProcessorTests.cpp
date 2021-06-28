@@ -79,10 +79,11 @@ void testFibersConcurrency()
     Testing::checkEqualCollections(std::array { 1, 2, 3, 4, 5, 42, 43 }, consumed);
 }
 
-void testConsumeBySubscription(const std::pair<size_t, size_t>& params)
+void testConsumeBySubscription(const std::tuple<size_t, size_t, bool>& params)
 {
-    const size_t testThreadCount = params.first;
-    const size_t testProcessorTreadCount = params.second;
+    const size_t testThreadCount = std::get<0>(params);
+    const size_t testProcessorTreadCount = std::get<1>(params);
+    const bool startImmediately = std::get<2>(params);
 
     static const std::vector testValues = { "one", "two", "three", "four", "five" };
 
@@ -95,7 +96,10 @@ void testConsumeBySubscription(const std::pair<size_t, size_t>& params)
     std::for_each(consumed.begin(), consumed.end(), [](auto& consumed) { consumed.reserve(testValues.size()); });
 
     YQueue::Processor<std::string, std::string> processor(testProcessorTreadCount);
-    processor.start();
+
+    if (startImmediately) {
+        processor.start();
+    }
 
     Testing::ThreadSafetyTest()
         .runAction(testThreadCount, [&processor](size_t index) {
@@ -114,6 +118,10 @@ void testConsumeBySubscription(const std::pair<size_t, size_t>& params)
         })
         .wait();
 
+    if (!startImmediately) {
+        processor.start();
+    }
+
     // NOTE: Waiting until all produced values are consumed.
     std::for_each(consumed.cbegin(), consumed.cend(), [](const auto& consumed) {
         while (consumed.size() < testValues.size()) {
@@ -128,10 +136,11 @@ void testConsumeBySubscription(const std::pair<size_t, size_t>& params)
     });
 }
 
-void testSubscribeAnUnSubscribe(const std::pair<size_t, size_t>& params)
+void testSubscribeAnUnSubscribe(const std::tuple<size_t, size_t, bool>& params)
 {
-    const size_t testThreadCount = params.first;
-    const size_t testProcessorTreadCount = params.second;
+    const size_t testThreadCount = std::get<0>(params);
+    const size_t testProcessorTreadCount = std::get<1>(params);
+    const bool startImmediately = std::get<2>(params);
 
     static const std::vector testValues = { "one", "two", "three", "four", "five" };
 
@@ -144,7 +153,10 @@ void testSubscribeAnUnSubscribe(const std::pair<size_t, size_t>& params)
     std::for_each(consumed.begin(), consumed.end(), [](auto& consumed) { consumed.reserve(testValues.size()); });
 
     YQueue::Processor<std::string, std::string> processor(testProcessorTreadCount);
-    processor.start();
+
+    if (startImmediately) {
+        processor.start();
+    }
 
     Testing::ThreadSafetyTest()
         .runAction(testThreadCount, [&processor](size_t index) {
@@ -177,6 +189,10 @@ void testSubscribeAnUnSubscribe(const std::pair<size_t, size_t>& params)
         })
         .wait();
 
+    if (!startImmediately) {
+        processor.start();
+    }
+
     // NOTE: Waiting until all produced values are consumed.
     std::for_each(consumed.cbegin(), consumed.cend(), [](const auto& consumed) {
         while (consumed.size() < testValues.size()) {
@@ -194,14 +210,23 @@ void testSubscribeAnUnSubscribe(const std::pair<size_t, size_t>& params)
 boost::unit_test::test_suite* init_unit_test_suite(int, char**)
 {
     constexpr std::array params = {
-        std::pair(1, 1),
-        std::pair(1, 4),
-        std::pair(2, 4),
-        std::pair(4, 4),
-        std::pair(4, 2),
-        std::pair(4, 1),
-        std::pair(111, 11),
-        std::pair(11, 111),
+        std::tuple(1, 1, false),
+        std::tuple(1, 4, false),
+        std::tuple(2, 4, false),
+        std::tuple(4, 4, false),
+        std::tuple(4, 2, false),
+        std::tuple(4, 1, false),
+        std::tuple(111, 11, false),
+        std::tuple(11, 111, false),
+
+        std::tuple(1, 1, true),
+        std::tuple(1, 4, true),
+        std::tuple(2, 4, true),
+        std::tuple(4, 4, true),
+        std::tuple(4, 2, true),
+        std::tuple(4, 1, true),
+        std::tuple(111, 11, true),
+        std::tuple(11, 111, true),
     };
 
     boost::unit_test::test_suite* test = BOOST_TEST_SUITE(TEST_SUITE);

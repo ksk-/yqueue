@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.18)
 
 project(yqueue CXX)
 
-set(VERSION 0.0.2)
+set(VERSION 0.0.3)
 
 include(GNUInstallDirs)
 

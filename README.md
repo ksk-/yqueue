@@ -46,7 +46,7 @@ the library is header-only but you have to link the Boost.Fiber library and the 
         find_package(Threads)
         find_package(Boost REQUIRED COMPONENTS fiber)
 
-        find_package(yqueue 0.0.2 REQUIRED)
+        find_package(yqueue 0.0.3 REQUIRED)
 
         add_executable(your-app main.cpp)
         target_link_libraries(your-app PRIVATE yqueue)

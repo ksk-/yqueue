@@ -128,18 +128,20 @@ namespace YQueue
 
             std::lock_guard lock(mutex_);
 
-            if (isRunning_ && !Utils::contains(consumers_, key)) {
-                stop();
-                std::tie(std::ignore, inserted) = consumers_.try_emplace(key, std::move(consumer));
-                start();
-            } else {
-                std::tie(std::ignore, inserted) = consumers_.try_emplace(key, std::move(consumer));
-            }
+            if (!Utils::contains(consumers_, key)) {
+                if (isRunning_) {
+                    stop();
+                    std::tie(std::ignore, inserted) = consumers_.try_emplace(key, std::move(consumer));
+                    start();
+                } else {
+                    std::tie(std::ignore, inserted) = consumers_.try_emplace(key, std::move(consumer));
+                }
 
-            if (inserted) {
-                auto&& [queue, _] = queues_.getOrInsert(key, std::make_shared<QueueType>());
-                onStopped_.connect([queue] { queue->disableWaiting(); });
-                queue->enableWaiting();
+                if (inserted) {
+                    auto&& [queue, _] = queues_.getOrInsert(key, std::make_shared<QueueType>());
+                    onStopped_.connect([queue] { queue->disableWaiting(); });
+                    queue->enableWaiting();
+                }
             }
 
             return inserted;
@@ -156,10 +158,12 @@ namespace YQueue
 
             std::lock_guard lock(mutex_);
 
-            if (isRunning_ && Utils::contains(consumers_, key)) {
+            if (isRunning_) {
                 stop();
                 removed = consumers_.erase(key) > 0;
                 start();
+            } else {
+                removed = consumers_.erase(key) > 0;
             }
 
             return removed;
