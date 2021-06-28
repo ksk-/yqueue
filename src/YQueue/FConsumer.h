@@ -17,8 +17,7 @@ namespace YQueue
     public:
         /**
          * @brief Constructor.
-         * @tparam Callable the consumer callable type
-         * @param callable the callable
+         * @param callable the consumer callable
          */
         template<typename Callable, REQUIRES(std::is_invocable_v<Callable, Key, Value>)>
         FConsumer(Callable&& callable)

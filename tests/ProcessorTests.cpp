@@ -35,8 +35,6 @@ void testEnqueueAndDequeue()
 
 void testFibersConcurrency()
 {
-    using namespace std::chrono_literals;
-
     constexpr std::array firstProducerValues = { 1, 2, 3, 4, 5 };
     constexpr std::array secondProducerValues = { 42, 43 };
 

@@ -156,9 +156,11 @@ namespace YQueue
 
             std::lock_guard lock(mutex_);
 
-            stop();
-            removed = consumers_.erase(key) > 0;
-            start();
+            if (isRunning_ && Utils::contains(consumers_, key)) {
+                stop();
+                removed = consumers_.erase(key) > 0;
+                start();
+            }
 
             return removed;
         }
