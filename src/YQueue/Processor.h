@@ -69,10 +69,11 @@ namespace YQueue
          * @note The queue will be created if it isn't exists.
          * @return true if the value was enqueued successfully, false - otherwise
          */
-        bool enqueue(const Key& key, Value value)
+        template<typename T, REQUIRES(std::is_convertible_v<T, Value>)>
+        bool enqueue(const Key& key, T&& value)
         {
             auto&& [queue, _] = queues_.getOrInsert(key, std::make_shared<QueueType>());
-            return queue->enqueue(std::move(value));
+            return queue->enqueue(std::forward<T>(value));
         }
 
         /**
@@ -166,7 +167,10 @@ namespace YQueue
 
                     while (isRunning_) {
                         boost::this_fiber::yield();
-                        queue->consumeAll([&](Value value) { consumer->consume(key, std::move(value)); });
+
+                        queue->consumeAll([&](auto&& value) {
+                            consumer->consume(key, std::forward<decltype(value)>(value));
+                        });
                     }
                 });
             }

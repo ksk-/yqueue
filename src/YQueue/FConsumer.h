@@ -24,7 +24,12 @@ namespace YQueue
             : callable_(std::forward<Callable>(callable))
         {}
 
-        void consume(const Key& key, Value value) override
+        void consume(const Key& key, const Value& value) override
+        {
+            std::invoke(callable_, key, value);
+        }
+
+        void consume(const Key& key, Value&& value) override
         {
             std::invoke(callable_, key, std::move(value));
         }

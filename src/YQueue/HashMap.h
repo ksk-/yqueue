@@ -44,14 +44,15 @@ namespace YQueue
                 return (it != data_.cend()) ? std::optional(it->second) : std::nullopt;
             }
 
-            std::pair<Value, bool> getOrInsert(const Key& key, Value value)
+            template<typename T, REQUIRES(std::is_convertible_v<T, Value>)>
+            std::pair<Value, bool> getOrInsert(const Key& key, T&& value)
             {
                 std::lock_guard lock(mutex_);
 
                 auto it = findValue(key);
 
                 if (it == data_.end()) {
-                    data_.emplace_front(key, std::move(value));
+                    data_.emplace_front(key, std::forward<T>(value));
                     return { data_.begin()->second, true };
                 }
 
@@ -97,9 +98,10 @@ namespace YQueue
          * @return [value, true] if the value was inserted or [value, false] if it was found in the map
          * @warning The return value is a copy of the value in the map.
          */
-        std::pair<Value, bool> getOrInsert(const Key& key, Value value)
+        template<typename T, REQUIRES(std::is_convertible_v<T, Value>)>
+        std::pair<Value, bool> getOrInsert(const Key& key, T&& value)
         {
-            return bucket(key).getOrInsert(key, std::move(value));
+            return bucket(key).getOrInsert(key, std::forward<T>(value));
         }
 
         /**

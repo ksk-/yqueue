@@ -16,8 +16,15 @@ namespace YQueue
         /**
          * @brief Consumes the value from the given queue.
          * @param key the key of the queue
-         * @param value the consumed value
+         * @param value the consumed value (lvalue reference)
          */
-        virtual void consume(const Key& key, Value value) = 0;
+        virtual void consume(const Key& key, const Value& value) = 0;
+
+        /**
+         * @brief Consumes the value from the given queue.
+         * @param key the key of the queue
+         * @param value the consumed value (rvalue reference)
+         */
+        virtual void consume(const Key& key, Value&& value) = 0;
     };
 }

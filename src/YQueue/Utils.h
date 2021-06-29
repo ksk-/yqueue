@@ -34,8 +34,8 @@ namespace YQueue::Utils
 
         std::vector<std::vector<value_type>> chunks(count);
 
-        std::for_each(first, last, [&chunks, count, index = 0](value_type value) mutable {
-            chunks[index % count].emplace_back(std::move(value));
+        std::for_each(first, last, [&chunks, count, index = 0](const value_type& value) mutable {
+            chunks[index % count].emplace_back(value);
             ++index;
         });
 

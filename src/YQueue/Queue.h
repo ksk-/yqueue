@@ -150,12 +150,13 @@ namespace YQueue
          * @param value the value
          * @return true if the value was enqueued successfully, false if the queue is full
          */
-        bool enqueue(T value)
+        template<typename U, REQUIRES(std::is_convertible_v<U, T>)>
+        bool enqueue(U&& value)
         {
             std::lock_guard lock(mutex_);
 
             if (!isFull()) {
-                container_.push_back(std::move(value));
+                container_.push_back(std::forward<U>(value));
 
                 if (waiting_) {
                     cv_.notify_one();
