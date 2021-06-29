@@ -35,7 +35,7 @@ namespace YQueue
         class Bucket final : private boost::noncopyable
         {
         public:
-            std::optional<Value> find(const Key& key)
+            std::optional<Value> find(const Key& key) const
             {
                 std::shared_lock lock(mutex_);
 
@@ -68,7 +68,7 @@ namespace YQueue
             }
 
         private:
-            auto findValue(const Key& key)
+            auto findValue(const Key& key) const
             {
                 return std::find_if(data_.begin(), data_.end(), [&key](const auto& pair) {
                     return std::invoke(KeyEqual(), pair.first, key);
@@ -76,7 +76,7 @@ namespace YQueue
             }
 
         private:
-            std::shared_mutex mutex_;
+            mutable std::shared_mutex mutex_;
             std::forward_list<std::pair<Key, Value>> data_;
         };
 
@@ -108,7 +108,7 @@ namespace YQueue
          * @return value if it exists or std::nullopt otherwise
          * @warning The return value is a copy of the value in the map.
          */
-        std::optional<Value> find(const Key& key)
+        std::optional<Value> find(const Key& key) const
         {
             return bucket(key).find(key);
         }
@@ -123,6 +123,11 @@ namespace YQueue
 
     private:
         Bucket& bucket(const Key& key)
+        {
+            return buckets_[std::invoke(Hash(), key) % buckets_.size()];;
+        }
+
+        const Bucket& bucket(const Key& key) const
         {
             return buckets_[std::invoke(Hash(), key) % buckets_.size()];
         }
