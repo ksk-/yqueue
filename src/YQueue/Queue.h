@@ -54,32 +54,34 @@ namespace YQueue
         template<typename Callable, REQUIRES(std::is_invocable_v<Callable, T>)>
         size_t consumeAll(Callable&& callable)
         {
-            std::unique_lock lock(mutex_);
-
-            if (waiting_) {
-                cv_.wait(lock, [this] { return !isEmpty() || !waiting_; });
-            }
-
-            const size_t size = container_.size();
-
             std::vector<T> dequeued;
-            dequeued.reserve(size);
 
-            if constexpr (std::is_nothrow_move_constructible_v<T>) {
-                std::move(container_.begin(), container_.end(), std::back_inserter(dequeued));
-            } else {
-                std::copy(container_.begin(), container_.end(), std::back_inserter(dequeued));
+            {
+                std::unique_lock lock(mutex_);
+
+                if (waiting_) {
+                    cv_.wait(lock, [this] { return !isEmpty() || !waiting_; });
+                }
+
+                const size_t size = container_.size();
+                dequeued.reserve(size);
+
+                if constexpr (std::is_nothrow_move_constructible_v<T>) {
+                    std::move(container_.begin(), container_.end(), std::back_inserter(dequeued));
+                } else {
+                    std::copy(container_.begin(), container_.end(), std::back_inserter(dequeued));
+                }
+
+                container_.clear();
             }
 
-            container_.clear();
+            std::lock_guard lock(mutex_);
 
-            lock.unlock();
-
-            lock.lock();
             std::for_each(dequeued.cbegin(), dequeued.cend(), std::forward<Callable>(callable));
 
             return dequeued.size();
         }
+
 
         /**
          * @brief Invokes the given callable to consume one available value from the queue.
@@ -89,22 +91,27 @@ namespace YQueue
         template<typename Callable, REQUIRES(std::is_invocable_v<Callable, T>)>
         bool consumeOne(Callable&& callable)
         {
-            std::unique_lock lock(mutex_);
+            std::optional<T> dequeued;
 
-            if (waiting_) {
-                cv_.wait(lock, [this] { return !isEmpty() || !waiting_; });
+            {
+                std::unique_lock lock(mutex_);
+
+                if (waiting_) {
+                    cv_.wait(lock, [this] { return !isEmpty() || !waiting_; });
+                }
+
+                if (!isEmpty()) {
+                     dequeued = pop();
+                }
             }
 
-            if (isEmpty()) {
+            if (!dequeued.has_value()) {
                 return false;
             }
 
-            T dequeued = pop();
+            std::lock_guard lock(mutex_);
 
-            lock.unlock();
-
-            lock.lock();
-            std::invoke(std::forward<Callable>(callable), std::move(dequeued));
+            std::invoke(std::forward<Callable>(callable), dequeued.value());
 
             return true;
         }
