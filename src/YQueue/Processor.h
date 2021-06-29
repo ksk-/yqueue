@@ -83,18 +83,7 @@ namespace YQueue
             std::lock_guard lock(mutex_);
 
             if (!isRunning_) {
-                isRunning_ = true;
-
-                const size_t threadCount = std::min(maxThreadCount_, consumers_.size());
-                threadPool_.emplace(threadCount);
-
-                auto consumers = Utils::splitToChunks(consumers_.cbegin(), consumers_.cend(), threadCount);
-
-                for (size_t i = 0; i < threadCount; ++i) {
-                    boost::asio::post(threadPool_.value(), [this, consumers = std::move(consumers[i])] {
-                        runConsumers(consumers);
-                    });
-                }
+                start_p();
             }
         }
 
@@ -106,11 +95,7 @@ namespace YQueue
             std::lock_guard lock(mutex_);
 
             if (isRunning_) {
-                isRunning_ = false;
-                std::invoke(onStopped_);
-
-                threadPool_->wait();
-                threadPool_.reset();
+                stop_p();
             }
         }
 
@@ -130,9 +115,9 @@ namespace YQueue
 
             if (!Utils::contains(consumers_, key)) {
                 if (isRunning_) {
-                    stop();
+                    stop_p();
                     std::tie(std::ignore, inserted) = consumers_.try_emplace(key, std::move(consumer));
-                    start();
+                    start_p();
                 } else {
                     std::tie(std::ignore, inserted) = consumers_.try_emplace(key, std::move(consumer));
                 }
@@ -159,9 +144,9 @@ namespace YQueue
             std::lock_guard lock(mutex_);
 
             if (isRunning_) {
-                stop();
+                stop_p();
                 removed = consumers_.erase(key) > 0;
-                start();
+                start_p();
             } else {
                 removed = consumers_.erase(key) > 0;
             }
@@ -189,6 +174,31 @@ namespace YQueue
             std::for_each(fibers.begin(), fibers.end(), std::mem_fn(&boost::fibers::fiber::join));
         }
 
+        void start_p()
+        {
+            isRunning_ = true;
+
+            const size_t threadCount = std::min(maxThreadCount_, consumers_.size());
+            threadPool_.emplace(threadCount);
+
+            auto consumers = Utils::splitToChunks(consumers_.cbegin(), consumers_.cend(), threadCount);
+
+            for (size_t i = 0; i < threadCount; ++i) {
+                boost::asio::post(threadPool_.value(), [this, consumers = std::move(consumers[i])] {
+                    runConsumers(consumers);
+                });
+            }
+        }
+
+        void stop_p()
+        {
+            isRunning_ = false;
+            std::invoke(onStopped_);
+
+            threadPool_->wait();
+            threadPool_.reset();
+        }
+
     private:
         bool isRunning_;
         boost::signals2::signal<void()> onStopped_;
@@ -198,7 +208,7 @@ namespace YQueue
 
         HashMap<Key, std::shared_ptr<QueueType>> queues_;
 
-        std::recursive_mutex mutex_;
+        std::mutex mutex_;
         std::unordered_map<Key, std::shared_ptr<IConsumer<Key, Value>>> consumers_;
     };
 }
