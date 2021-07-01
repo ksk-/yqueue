@@ -19,7 +19,8 @@ namespace YQueue
         typename Key, typename Value,
         typename QueueType = Queue<Value, boost::circular_buffer<Value>, Concurrency::Fibers>,
         REQUIRES(std::is_copy_constructible_v<Key>),
-        REQUIRES(std::is_copy_constructible_v<Value>)
+        REQUIRES(std::is_copy_constructible_v<Value>),
+        REQUIRES(QueueType::concurrency == Concurrency::Fibers)
     >
     /**
      * @class Processor

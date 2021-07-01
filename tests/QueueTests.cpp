@@ -45,6 +45,7 @@ void testConsumeOne(size_t testThreadCount)
 
     std::vector<std::string> produced(testThreadCount * testValueCount);
     std::multiset<std::string> consumed;
+    std::mutex mutex;
 
     YQueue::Queue<std::string, std::deque<std::string>, Concurrency, testValueCount> queue;
     queue.enableWaiting();
@@ -58,9 +59,10 @@ void testConsumeOne(size_t testThreadCount)
                 while (!queue.enqueue(value)) {};
             }
         })
-        .runAction(testThreadCount, [&consumed, &queue](size_t index) {
+        .runAction(testThreadCount, [&queue, &consumed, &mutex](size_t index) {
             for (size_t i = 0; i < testValueCount; ++i) {
                 const bool isConsumed = queue.consumeOne([&](std::string value) {
+                    std::lock_guard lock(mutex);
                     consumed.emplace(std::move(value));
                 });
 

@@ -23,19 +23,25 @@ namespace YQueue
     template<
         typename T,
         typename Container = std::deque<T>,
-        Concurrency concurrency = Concurrency::Threads,
+        Concurrency Concurrency = Concurrency::Threads,
         size_t Capacity = YQUEUE_QUEUE_CAPACITY,
         REQUIRES(std::is_copy_constructible_v<T>)
     >
     class Queue final : private boost::noncopyable
     {
-        using Mutex = std::conditional_t<concurrency == Concurrency::Threads,
+        using Mutex = std::conditional_t<Concurrency == Concurrency::Threads,
             std::mutex, boost::fibers::mutex
         >;
 
-        using ConditionVariable = std::conditional_t<concurrency == Concurrency::Threads,
+        using ConditionVariable = std::conditional_t<Concurrency == Concurrency::Threads,
             std::condition_variable, boost::fibers::condition_variable
         >;
+
+    public:
+        /**
+         * @brief The concurrency model to synchronize queue operations.
+         */
+        static constexpr YQueue::Concurrency concurrency = Concurrency;
 
     public:
         Queue()
@@ -75,8 +81,6 @@ namespace YQueue
                 container_.clear();
             }
 
-            std::lock_guard lock(mutex_);
-
             std::for_each(dequeued.cbegin(), dequeued.cend(), std::forward<Callable>(callable));
 
             return dequeued.size();
@@ -108,8 +112,6 @@ namespace YQueue
             if (!dequeued.has_value()) {
                 return false;
             }
-
-            std::lock_guard lock(mutex_);
 
             std::invoke(std::forward<Callable>(callable), dequeued.value());
 
@@ -153,19 +155,21 @@ namespace YQueue
         template<typename U, REQUIRES(std::is_convertible_v<U, T>)>
         bool enqueue(U&& value)
         {
-            std::lock_guard lock(mutex_);
+            {
+                std::lock_guard lock(mutex_);
 
-            if (!isFull()) {
-                container_.push_back(std::forward<U>(value));
-
-                if (waiting_) {
-                    cv_.notify_one();
+                if (isFull()) {
+                    return false;
                 }
 
-                return true;
+                container_.push_back(std::forward<U>(value));
             }
 
-            return false;
+            if (waiting_) {
+                cv_.notify_one();
+            }
+
+            return true;
         }
 
     private:
